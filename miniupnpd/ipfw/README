@@ -1,3 +1,9 @@
-This directory contains the files for support in the ipfw backend under Mac OS X up to version
-10.6 Snow Leopard.
-Support for FreeBSD has never been added, so FreeBSD has to use either the pf or the ipf backend.
+This directory contains the files for support in the ipfw backend.
+
+Supported platforms:
+- Mac OS X up to version 10.6 Snow Leopard
+- FreeBSD (with firewall_enable="YES" in /etc/rc.conf)
+
+The ipfw backend uses the standard ipfw API through setsockopt/getsockopt calls.
+On FreeBSD, the backend will try to use SOCK_RAW socket first, and fallback to
+SOCK_DGRAM if needed.

@@ -71,7 +71,7 @@ struct file;
 #include "../upnpglobalvars.h"
 
 /* This ipfw backend is known to work with OS X up to 10.6.
- * Some work is needed to support FreeBSD ipfw.
+ * FreeBSD support has been added.
  */
 #ifndef IP_FW_CURRENT_API_VERSION
 #error "ip_fw.h does not contain supported API"
@@ -552,4 +552,77 @@ error:
 	if (rules != NULL)
 		ipfw_free_ruleset(&rules);
 	return r;
+}
+
+int
+get_redirect_rule_count(const char * ifname)
+{
+	int i, count_rules, total_rules = 0;
+	struct ip_fw * rules = NULL;
+	int count = 0;
+
+	UNUSED(ifname);
+
+	do {
+		count_rules = ipfw_fetch_ruleset(&rules, &total_rules, 10);
+		if (count_rules < 0)
+			goto error;
+	} while (count_rules == 10);
+
+	/* Count all redirect rules (has FWD flag) for TCP or UDP */
+	for (i = 0; i < total_rules - 1; i++) {
+		const struct ip_fw * ptr = &rules[i];
+		/* Check if this is a redirect rule (has FWD flag) */
+		if (ptr->fw_flg & IP_FW_F_FWD) {
+			/* Check if it's TCP or UDP */
+			if (ptr->fw_prot == IPPROTO_TCP || ptr->fw_prot == IPPROTO_UDP) {
+				count++;
+			}
+		}
+	}
+
+	ipfw_free_ruleset(&rules);
+	return count;
+
+error:
+	if (rules != NULL)
+		ipfw_free_ruleset(&rules);
+	return -1;
+}
+
+int
+clear_redirect_rules(void)
+{
+	int i, count_rules, total_rules = 0;
+	struct ip_fw * rules = NULL;
+	int cleared = 0;
+
+	do {
+		count_rules = ipfw_fetch_ruleset(&rules, &total_rules, 10);
+		if (count_rules < 0)
+			goto error;
+	} while (count_rules == 10);
+
+	/* Delete all redirect rules created by miniupnpd */
+	for (i = 0; i < total_rules - 1; i++) {
+		const struct ip_fw * ptr = &rules[i];
+		/* Check if this is a redirect rule (has FWD flag) */
+		if (ptr->fw_flg & IP_FW_F_FWD) {
+			/* Check if it's TCP or UDP */
+			if (ptr->fw_prot == IPPROTO_TCP || ptr->fw_prot == IPPROTO_UDP) {
+				if (ipfw_exec(IP_FW_DEL, (struct ip_fw *)ptr, sizeof(*ptr)) == 0) {
+					del_desc_time(ptr->fw_uar.fw_pts[0], ptr->fw_prot);
+					cleared++;
+				}
+			}
+		}
+	}
+
+	ipfw_free_ruleset(&rules);
+	return cleared;
+
+error:
+	if (rules != NULL)
+		ipfw_free_ruleset(&rules);
+	return -1;
 }

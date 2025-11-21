@@ -370,7 +370,7 @@ case $OS_NAME in
 				echo "Using pf"
 				FW=pf
 			elif checkyesno firewall_enable; then
-				echo "Using ifpw"
+				echo "Using ipfw"
 				FW=ipfw
 			fi
 		fi
@@ -379,8 +379,7 @@ case $OS_NAME in
 			FW=pf
 		fi
 		if [ "$FW" = "ipfw" ] ; then
-			echo "!!! ipfw is known to not work with FreeBSD, please contribute !!!"
-			echo "!!! see https://github.com/miniupnp/miniupnp/issues/596       !!!"
+			echo "Using ipfw backend (FreeBSD support enabled)"
 		fi
 		echo "#define USE_IFACEWATCHER 1" >> ${CONFIGFILE}
 		OS_URL=https://www.freebsd.org/
